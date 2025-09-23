@@ -227,7 +227,7 @@ class ASCIIGeneratorGUI:
         width_frame = ttk.Frame(main_frame)
         width_frame.grid(row=3, column=1, columnspan=2, sticky=tk.W, pady=5)
         
-        width_scale = ttk.Scale(width_frame, from_=20, to=150, 
+        width_scale = ttk.Scale(width_frame, from_=20, to=300, 
                                variable=self.width, orient=tk.HORIZONTAL, length=200)
         width_scale.grid(row=0, column=0, padx=(0, 10))
         
