@@ -6,6 +6,15 @@ from logger.logger import logger
 from PIL import Image
 import numpy as np
 
+# Import conditionnel pour rembg
+try:
+    from rembg import remove
+    REMBG_AVAILABLE = True
+    logger.info("rembg disponible - Support de suppression d'arrière-plan activé")
+except ImportError:
+    REMBG_AVAILABLE = False
+    logger.warning("rembg non disponible - Suppression d'arrière-plan désactivée")
+
 class ASCIIGenerator:
     """
     Générateur d'images ASCII à partir d'images classiques.
@@ -52,6 +61,51 @@ class ASCIIGenerator:
         except Exception as e:
             logger.error(f"Erreur lors du chargement de l'image: {e}")
             return None
+    
+    def remove_background(self, image):
+        """
+        Supprime l'arrière-plan de l'image.
+        
+        Args:
+            image (PIL.Image): Image source
+            
+        Returns:
+            PIL.Image: Image sans arrière-plan ou image originale si erreur
+        """
+        if not REMBG_AVAILABLE:
+            logger.warning("rembg non disponible - Suppression d'arrière-plan ignorée")
+            return image
+        
+        try:
+            logger.info("Suppression de l'arrière-plan en cours...")
+            
+            # Convertir en bytes pour rembg
+            import io
+            img_byte_arr = io.BytesIO()
+            image.save(img_byte_arr, format='PNG')
+            img_byte_arr = img_byte_arr.getvalue()
+            
+            # Supprimer l'arrière-plan
+            output = remove(img_byte_arr)
+            
+            # Reconvertir en PIL Image
+            result_image = Image.open(io.BytesIO(output))
+            
+            # Créer un fond blanc pour remplacer la transparence
+            if result_image.mode == 'RGBA':
+                # Créer une image noire de la même taille
+                background = Image.new('RGB', result_image.size, (0, 0, 0))
+                # Composer l'image avec le fond noir
+                background.paste(result_image, mask=result_image.split()[-1])  # Utiliser le canal alpha comme masque
+                result_image = background
+            
+            logger.info("Arrière-plan supprimé avec succès")
+            return result_image
+            
+        except Exception as e:
+            logger.error(f"Erreur lors de la suppression d'arrière-plan: {e}")
+            logger.info("Utilisation de l'image originale")
+            return image
     
     def resize_image(self, image, width=100):
         """
@@ -118,7 +172,7 @@ class ASCIIGenerator:
         logger.debug(f"Conversion terminée: {len(ascii_lines)} lignes générées")
         return ascii_lines
     
-    def generate_ascii(self, image_path, width=100, save_to_file=None):
+    def generate_ascii(self, image_path, width=100, save_to_file=None, remove_bg=False):
         """
         Génère l'art ASCII à partir d'une image.
         
@@ -126,16 +180,23 @@ class ASCIIGenerator:
             image_path (str): Chemin vers l'image source
             width (int): Largeur en caractères
             save_to_file (str): Chemin pour sauvegarder (optionnel)
+            remove_bg (bool): Supprimer l'arrière-plan avant conversion
             
         Returns:
             str: Art ASCII ou None si erreur
         """
         logger.info(f"Début de la génération ASCII pour: {image_path}")
+        if remove_bg:
+            logger.info("Option de suppression d'arrière-plan activée")
         
         # Chargement de l'image
         image = self.load_image(image_path)
         if image is None:
             return None
+        
+        # Suppression de l'arrière-plan si demandée
+        if remove_bg:
+            image = self.remove_background(image)
         
         # Redimensionnement
         image = self.resize_image(image, width)

@@ -1,74 +1,78 @@
-# 🎨 Générateur d'Images ASCII
+# 🎨 ASCII image convertor
 
-Un générateur Python complet pour convertir vos images en art ASCII avec différents styles et niveaux de détail.
+A python-coded image to ASCII convertor
 
-## ✨ Fonctionnalités
+## ✨ Features
 
-- 🖼️ **Conversion d'images** : Support JPEG, PNG, BMP, GIF, TIFF
-- 🎭 **4 styles de caractères** : Simple, Standard, Détaillé, Blocs
-- 📏 **Redimensionnement intelligent** : Préservation des proportions
-- 💾 **Sauvegarde** : Export en fichiers texte
-- 🔍 **Aperçu** : Interface complète avec tkinter
-- 📊 **Logging** : Suivi détaillé des opérations
-- 🚀 **Optimisations** : Calculs numpy pour de meilleures performances
+- **Image conversion** : Suport JPEG, PNG, BMP, GIF, TIFF
+- **4 character styles** : Simple, Standard, Détaillé, Blocs
+- **Intelligent resizing** : Proportions preservation
+- **Remove background** : Option to remove the background with rembg library
+- **Backup**: Export to text files
+- **Preview**: Full interface with tkinter
+- **Logging**: Detailed tracking of operations
+- **Optimizations**: Numpy calculations for better performance
 
-## 📁 Structure du Projet
+## 📁 Project structure
 
 ```
 ASCII_generator/
-├── README.md                   # Ce fichier
-├── logger/                     # Système de logging
+├── README.md                   # This file
+├── logger/                     # Logging system
 │   ├── __init__.py
 │   └── logger.py
-└── project_name/               # Code principal
+└── ascii/
+│   ├── main.py                 # Entry point
+│   ├── generator.py            # Backend
+│   └── generatorGUI.py         # Frontend (GUI)
 ```
 
-## 🚀 Installation et Utilisation
+## 🚀 Installation and Use
 
-### 1. Installation des dépendances
+### 1. Dependencies installation
 ```bash
 pip install pillow
 pip install numpy
 ```
 
-### 2. Utilisation basique
+### 2. Basic use
 ```bash
 python ascii/generator.py
 ```
 
-## 🎯 Styles de Caractères
+## 🎯 Character styles
 
-| Style | Caractères | Cas d'usage |
+| Style | Character | Usage case |
 |-------|------------|-------------|
-| `simple` | ` .:-=+*#%@` | Rendu rapide, images simples |
-| `standard` | ` .,-:;i=+%O#@` | **Recommandé** - Bon équilibre |
-| `detailed` | ` .'^\",:;Il!i><~+...` | Maximum de détails, photos complexes |
-| `blocks` | ` ░▒▓█` | Style pixel art, logos |
+| `simple` | ` .:-=+*#%@` | Fast rendering, simple images |
+| `standard` | ` .,-:;i=+%O#@` | **Recommended** - Good balance |
+| `detailed` | ` .'^\",:;Il!i><~+...` | Maximum detail, complex photos |
+| `blocks` | ` ░▒▓█` | Pixel art style, logos |
 
-## 🛠️ Configuration et Personnalisation
+## 🛠️ Configuration and Customization
 
-### Paramètres de conversion
-- **width** : Largeur en caractères (recommandé: 40-120)
-- **style** : Type de caractères ASCII à utiliser
-- **save_to_file** : Fichier de sortie (optionnel)
+### Conversion settings
+- **width**: Width in characters (recommended: 40-120)
+- **style**: Type of ASCII characters to use
+- **save_to_file**: Output file (optional)
 
-### Optimisation selon le type d'image
-- **Portraits** : style `standard` ou `detailed`, width 80-100
-- **Logos/Icônes** : style `simple` ou `blocks`, width 40-60  
-- **Paysages** : style `detailed`, width 100-120
-- **Images simples** : style `simple`, width 60-80
+### Optimization according to image type
+- **Portraits**: `standard` or `detailed` style, width 80-100
+- **Logos/Icons**: `simple` or `blocks` style, width 40-60
+- **Landscapes**: `detailed` style, width 100-120
+- **Simple images**: `simple` style, width 60-80
 
-## 🔧 Développement
+## 🔧 Development
 
-### Ajouter un nouveau style
+### Add a new style
 ```python
-# Dans generator.py, modifier ASCII_CHARS
+# In generator.py, modify ASCII_CHARS
 ASCII_CHARS = {
-    'mon_style': " .-+#@",
-    # ... autres styles
+    'my_style': " .-+#@",
+    # ... other styles
 }
 ```
 
 ## 📄 Licence
 
-Ce projet est libre d'utilisation ! Amusez-vous bien ! 🎉
+Free of use !

@@ -5,18 +5,34 @@ import threading
 
 from generator import ASCIIGenerator
 
+# Vérifier si rembg est disponible (même logique que generator.py)
+try:
+    from rembg import remove
+    REMBG_AVAILABLE = True
+    logger.info("rembg disponible dans l'interface - Support de suppression d'arrière-plan activé")
+except ImportError:
+    REMBG_AVAILABLE = False
+    logger.warning("rembg non disponible dans l'interface - Suppression d'arrière-plan désactivée")
+
 class ASCIIGeneratorGUI:
     """Interface graphique pour le générateur ASCII."""
     
     def __init__(self):
         self.root = tk.Tk()
-        self.root.title("🎨 Générateur d'Images ASCII")
-        self.root.geometry("800x600")
+        self.root.title("Générateur d'Images ASCII")
+        self.root.geometry("800x650")
         
         # Variables
         self.image_path = tk.StringVar()
         self.style = tk.StringVar(value="standard")
         self.width = tk.IntVar(value=80)
+        self.remove_background = tk.BooleanVar(value=False)
+        
+        # Log du statut de rembg au démarrage
+        if REMBG_AVAILABLE:
+            logger.info("Interface: Suppression d'arrière-plan disponible")
+        else:
+            logger.warning("Interface: Suppression d'arrière-plan non disponible")
         
         self.setup_ui()
         
@@ -63,11 +79,36 @@ class ASCIIGeneratorGUI:
         self.style_desc.grid(row=2, column=2, sticky=tk.W, padx=(10, 0), pady=5)
         style_combo.bind('<<ComboboxSelected>>', self.update_style_description)
         
+        # Options de traitement
+        options_frame = ttk.LabelFrame(main_frame, text="Options de traitement", padding="5")
+        options_frame.grid(row=3, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=10)
+        
+        # Checkbox pour suppression d'arrière-plan
+        self.bg_checkbox = ttk.Checkbutton(
+            options_frame, 
+            text="Supprimer l'arrière-plan", 
+            variable=self.remove_background,
+            command=self.on_background_option_change
+        )
+        self.bg_checkbox.grid(row=0, column=0, sticky=tk.W)
+        
+        # Label d'information sur rembg - condition corrigée
+        if REMBG_AVAILABLE:
+            self.bg_info = ttk.Label(options_frame, text="✅ Disponible - Améliore le focus sur le sujet", 
+                                    foreground="green", font=("Arial", 8))
+        else:
+            self.bg_info = ttk.Label(options_frame, text="❌ Installer avec 'pip install rembg' pour activer", 
+                                    foreground="red", font=("Arial", 8))
+            # Désactiver la checkbox si rembg n'est pas disponible
+            self.bg_checkbox.config(state="disabled")
+        
+        self.bg_info.grid(row=0, column=1, sticky=tk.W, padx=(10, 0))
+        
         # Largeur
-        ttk.Label(main_frame, text="Largeur:").grid(row=3, column=0, sticky=tk.W, pady=5)
+        ttk.Label(main_frame, text="Largeur:").grid(row=4, column=0, sticky=tk.W, pady=5)
         
         width_frame = ttk.Frame(main_frame)
-        width_frame.grid(row=3, column=1, columnspan=2, sticky=(tk.W, tk.E), pady=5)
+        width_frame.grid(row=4, column=1, columnspan=2, sticky=(tk.W, tk.E), pady=5)
         
         # Sous-frame pour le slider et le label
         slider_frame = ttk.Frame(width_frame)
@@ -108,7 +149,7 @@ class ASCIIGeneratorGUI:
         
         # Boutons
         button_frame = ttk.Frame(main_frame)
-        button_frame.grid(row=4, column=0, columnspan=3, pady=20)
+        button_frame.grid(row=5, column=0, columnspan=3, pady=20)
         
         self.generate_btn = ttk.Button(button_frame, text="🚀 Générer ASCII", 
                                         command=self.generate_ascii, style="Accent.TButton")
@@ -119,10 +160,10 @@ class ASCIIGeneratorGUI:
         
         # Zone de résultat
         result_frame = ttk.LabelFrame(main_frame, text="Résultat ASCII", padding="5")
-        result_frame.grid(row=5, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(20, 0))
+        result_frame.grid(row=6, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(20, 0))
         result_frame.columnconfigure(0, weight=1)
         result_frame.rowconfigure(0, weight=1)
-        main_frame.rowconfigure(5, weight=1)
+        main_frame.rowconfigure(6, weight=1)
         
         # Zone de texte avec scrollbars
         text_frame = ttk.Frame(result_frame)
@@ -158,7 +199,23 @@ class ASCIIGeneratorGUI:
         self.copy_btn = ttk.Button(result_buttons, text="📋 Copier", 
                                     command=self.copy_result, state="disabled")
         self.copy_btn.pack(side=tk.LEFT)
-        
+
+    def on_background_option_change(self):
+        """Appelé quand l'option de suppression d'arrière-plan change."""
+        if self.remove_background.get() and not REMBG_AVAILABLE:
+            messagebox.showwarning(
+                "Fonctionnalité non disponible",
+                "Pour utiliser la suppression d'arrière-plan, installez rembg :\n\n"
+                "pip install rembg\n\n"
+                "Cette bibliothèque utilise l'IA pour détecter et supprimer "
+                "automatiquement l'arrière-plan de vos images."
+            )
+            self.remove_background.set(False)
+        elif self.remove_background.get():
+            logger.info("Suppression d'arrière-plan activée par l'utilisateur")
+        else:
+            logger.info("Suppression d'arrière-plan désactivée par l'utilisateur")
+
     def browse_image(self):
         """Ouvre le dialogue de sélection d'image."""
         filename = filedialog.askopenfilename(
@@ -276,7 +333,8 @@ class ASCIIGeneratorGUI:
             generator = ASCIIGenerator(self.style.get())
             ascii_art = generator.generate_ascii(
                 self.image_path.get(), 
-                width=self.width.get()
+                width=self.width.get(),
+                remove_bg=self.remove_background.get()
             )
             
             # Mettre à jour l'interface dans le thread principal
@@ -286,7 +344,7 @@ class ASCIIGeneratorGUI:
             error_msg = f"Erreur lors de la génération: {str(e)}"
             logger.error(error_msg)
             self.root.after(0, self._show_error, error_msg)
-            
+    
     def _update_result(self, ascii_art):
         """Met à jour le résultat dans l'interface (thread principal)."""
         self.generate_btn.config(state="normal", text="🚀 Générer ASCII")
@@ -302,17 +360,19 @@ class ASCIIGeneratorGUI:
             chars = len(ascii_art)
             style_name = self.style.get()
             width = self.width.get()
+            bg_removed = "Oui" if self.remove_background.get() else "Non"
             
             stats = f"\n\n📊 Statistiques:\n"
             stats += f"   • Lignes: {lines}\n"
             stats += f"   • Caractères: {chars:,}\n"
             stats += f"   • Style: {style_name}\n"
             stats += f"   • Largeur: {width}\n"
+            stats += f"   • Arrière-plan supprimé: {bg_removed}\n"
             
             self.result_text.insert(tk.END, stats)
         else:
             self._show_error("Échec de la génération ASCII")
-            
+    
     def _show_error(self, error_msg):
         """Affiche une erreur."""
         self.generate_btn.config(state="normal", text="🚀 Générer ASCII")
@@ -347,10 +407,10 @@ class ASCIIGeneratorGUI:
             self.root.clipboard_clear()
             self.root.clipboard_append(content)
             messagebox.showinfo("Succès", "Art ASCII copié dans le presse-papiers!")
-            
+    
     def show_welcome_message(self):
         """Affiche le message d'accueil dans la zone de résultat."""
-        welcome_text = """
+        welcome_text = f"""
 ╔════════════════════════════════════════════════════════════════════╗
 ║                         BIENVENUE !                               ║
 ╚════════════════════════════════════════════════════════════════════╝
@@ -360,8 +420,9 @@ class ASCIIGeneratorGUI:
  COMMENT COMMENCER :
    1.  Cliquez sur "Parcourir..." pour sélectionner votre image
    2.  Choisissez un style de rendu dans le menu déroulant
-   3.  Ajustez la largeur avec le curseur ou les boutons prédéfinis
-   4.  Cliquez sur "🚀 Générer ASCII" pour créer votre art
+   3.  Activez la suppression d'arrière-plan si désiré (recommandé pour portraits)
+   4.  Ajustez la largeur avec le curseur ou les boutons prédéfinis
+   5.  Cliquez sur "🚀 Générer ASCII" pour créer votre art
 
  STYLES DISPONIBLES :
    • Simple     → Rapide, idéal pour les tests
@@ -380,12 +441,11 @@ class ASCIIGeneratorGUI:
    ✅ Copie directe vers le presse-papiers
    ✅ Prévisualisation en temps réel
    ✅ Statistiques détaillées
+   ✅ Suppression intelligente d'arrière-plan
 
  Formats supportés : JPEG, PNG, BMP, GIF, TIFF
 
 ═══════════════════════════════════════════════════════════════════════
-
-Sélectionnez une image pour commencer votre création artistique !
         """
         
         self.result_text.delete(1.0, tk.END)
