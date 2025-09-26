@@ -33,6 +33,7 @@ ASCII_generator/
 ```bash
 pip install pillow
 pip install numpy
+pip install rembg
 ```
 
 ### 2. Basic use
