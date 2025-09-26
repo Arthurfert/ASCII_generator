@@ -33,7 +33,7 @@ class ASCIIGeneratorGUI:
         
         # Titre
         title_label = ttk.Label(main_frame, text="Générateur d'Images ASCII", 
-                               font=("Arial", 16, "bold"))
+                                font=("Courier", 16, "bold"))
         title_label.grid(row=0, column=0, columnspan=3, pady=(0, 20))
         
         # Sélection d'image
@@ -130,7 +130,7 @@ class ASCIIGeneratorGUI:
         text_frame.columnconfigure(0, weight=1)
         text_frame.rowconfigure(0, weight=1)
         
-        self.result_text = tk.Text(text_frame, wrap=tk.NONE, font=("Courier", 8),
+        self.result_text = tk.Text(text_frame, wrap=tk.NONE, font=("Courier", 9),
                                     bg="black", fg="white", insertbackground="white")
         
         # Scrollbars
@@ -219,7 +219,7 @@ class ASCIIGeneratorGUI:
             label = tk.Label(tooltip, text=text, justify=tk.LEFT,
                             background=bg_color, foreground=fg_color,
                             relief=tk.SOLID, borderwidth=1,
-                            font=("Arial", 9))
+                            font=("Courier", 9))
             label.pack()
             
             widget.tooltip = tooltip
