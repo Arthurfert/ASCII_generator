@@ -37,11 +37,18 @@ class ASCIIGenerator:
             ascii_chars (str): Type de caractères à utiliser ('simple', 'detailed', 'blocks', 'standard')
         """
         self.chars = self.ASCII_CHARS.get(ascii_chars, self.ASCII_CHARS['standard'])
+        
+        # Cache pour optimiser le traitement d'images
+        self._image_cache = {}
+        self._last_image_path = None
+        self._original_image = None
+        self._no_bg_image = None
+        
         logger.info(f"Générateur ASCII initialisé avec la palette '{ascii_chars}'")
     
     def load_image(self, image_path):
         """
-        Charge une image depuis un fichier.
+        Charge une image depuis un fichier avec mise en cache.
         
         Args:
             image_path (str): Chemin vers l'image
@@ -53,18 +60,40 @@ class ASCIIGenerator:
             if not os.path.exists(image_path):
                 logger.error(f"Le fichier {image_path} n'existe pas")
                 return None
+            
+            # Vérifier si c'est une nouvelle image
+            if image_path != self._last_image_path:
+                logger.info(f"Chargement d'une nouvelle image: {image_path}")
                 
-            image = Image.open(image_path)
-            logger.info(f"Image chargée: {image_path} - Taille: {image.size}")
+                # Nettoyer le cache pour la nouvelle image
+                self._clear_cache()
+                
+                # Charger la nouvelle image
+                image = Image.open(image_path)
+                self._original_image = image.copy()
+                self._last_image_path = image_path
+                
+                logger.info(f"Image chargée: {image_path} - Taille: {image.size}")
+            else:
+                logger.debug("Utilisation de l'image en cache")
+                image = self._original_image.copy()
+                
             return image
             
         except Exception as e:
             logger.error(f"Erreur lors du chargement de l'image: {e}")
             return None
     
+    def _clear_cache(self):
+        """Nettoie le cache des images traitées."""
+        self._image_cache.clear()
+        self._original_image = None
+        self._no_bg_image = None
+        logger.debug("Cache des images nettoyé")
+    
     def remove_background(self, image):
         """
-        Supprime l'arrière-plan de l'image.
+        Supprime l'arrière-plan de l'image avec mise en cache.
         
         Args:
             image (PIL.Image): Image source
@@ -75,6 +104,11 @@ class ASCIIGenerator:
         if not REMBG_AVAILABLE:
             logger.warning("rembg non disponible - Suppression d'arrière-plan ignorée")
             return image
+        
+        # Vérifier si on a déjà traité cette image
+        if self._no_bg_image is not None:
+            logger.debug("Utilisation de l'image sans arrière-plan en cache")
+            return self._no_bg_image.copy()
         
         try:
             logger.info("Suppression de l'arrière-plan en cours...")
@@ -91,7 +125,7 @@ class ASCIIGenerator:
             # Reconvertir en PIL Image
             result_image = Image.open(io.BytesIO(output))
             
-            # Créer un fond blanc pour remplacer la transparence
+            # Créer un fond noir pour remplacer la transparence
             if result_image.mode == 'RGBA':
                 # Créer une image noire de la même taille
                 background = Image.new('RGB', result_image.size, (0, 0, 0))
@@ -99,7 +133,10 @@ class ASCIIGenerator:
                 background.paste(result_image, mask=result_image.split()[-1])  # Utiliser le canal alpha comme masque
                 result_image = background
             
-            logger.info("Arrière-plan supprimé avec succès")
+            # Mettre en cache le résultat
+            self._no_bg_image = result_image.copy()
+            logger.info("Arrière-plan supprimé avec succès et mis en cache")
+            
             return result_image
             
         except Exception as e:
@@ -174,7 +211,7 @@ class ASCIIGenerator:
     
     def generate_ascii(self, image_path, width=100, save_to_file=None, remove_bg=False):
         """
-        Génère l'art ASCII à partir d'une image.
+        Génère l'art ASCII à partir d'une image avec optimisations de cache.
         
         Args:
             image_path (str): Chemin vers l'image source
@@ -189,12 +226,12 @@ class ASCIIGenerator:
         if remove_bg:
             logger.info("Option de suppression d'arrière-plan activée")
         
-        # Chargement de l'image
+        # Chargement de l'image (avec cache)
         image = self.load_image(image_path)
         if image is None:
             return None
         
-        # Suppression de l'arrière-plan si demandée
+        # Suppression de l'arrière-plan si demandée (avec cache)
         if remove_bg:
             image = self.remove_background(image)
         

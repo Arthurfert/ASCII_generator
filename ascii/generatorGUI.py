@@ -28,6 +28,12 @@ class ASCIIGeneratorGUI:
         self.width = tk.IntVar(value=80)
         self.remove_background = tk.BooleanVar(value=False)
         
+        # Instance persistante du générateur pour optimiser le cache
+        self.generator = ASCIIGenerator(self.style.get())
+        
+        # Trace pour mettre à jour le générateur quand le style change
+        self.style.trace('w', self.on_style_change)
+        
         # Log du statut de rembg au démarrage
         if REMBG_AVAILABLE:
             logger.info("Interface: Suppression d'arrière-plan disponible")
@@ -35,6 +41,25 @@ class ASCIIGeneratorGUI:
             logger.warning("Interface: Suppression d'arrière-plan non disponible")
         
         self.setup_ui()
+        
+        # Nettoyer le cache à la fermeture
+        self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
+        
+    def on_style_change(self, *args):
+        """Appelé quand le style change - recrée le générateur."""
+        new_style = self.style.get()
+        logger.info(f"Changement de style vers: {new_style}")
+        
+        # Conserver le cache de l'image actuelle
+        old_generator = self.generator
+        self.generator = ASCIIGenerator(new_style)
+        
+        # Transférer le cache si possible
+        if hasattr(old_generator, '_last_image_path') and old_generator._last_image_path:
+            self.generator._last_image_path = old_generator._last_image_path
+            self.generator._original_image = old_generator._original_image
+            self.generator._no_bg_image = old_generator._no_bg_image
+            logger.debug("Cache d'image transféré vers le nouveau générateur")
         
     def setup_ui(self):
         """Configure l'interface utilisateur."""
@@ -228,6 +253,11 @@ class ASCIIGeneratorGUI:
             ]
         )
         if filename:
+            # Vérifier si c'est une nouvelle image
+            if filename != self.image_path.get():
+                logger.info(f"Nouvelle image sélectionnée: {filename}")
+                # Le cache sera automatiquement nettoyé lors du prochain load_image
+            
             self.image_path.set(filename)
             
     def update_style_description(self, event=None):
@@ -328,10 +358,10 @@ class ASCIIGeneratorGUI:
         thread.start()
         
     def _generate_ascii_thread(self):
-        """Thread de génération ASCII."""
+        """Thread de génération ASCII avec générateur persistant."""
         try:
-            generator = ASCIIGenerator(self.style.get())
-            ascii_art = generator.generate_ascii(
+            # Utiliser l'instance persistante du générateur
+            ascii_art = self.generator.generate_ascii(
                 self.image_path.get(), 
                 width=self.width.get(),
                 remove_bg=self.remove_background.get()
@@ -460,6 +490,13 @@ class ASCIIGeneratorGUI:
         
         # Stocker la fonction pour pouvoir la réutiliser
         self._enable_editing = enable_editing
+
+    def on_closing(self):
+        """Appelé à la fermeture de l'application."""
+        logger.info("Fermeture de l'application - nettoyage du cache")
+        if hasattr(self, 'generator'):
+            self.generator.clear_cache()
+        self.root.destroy()
 
     def run(self):
         """Lance l'interface graphique."""
