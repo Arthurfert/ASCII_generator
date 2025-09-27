@@ -209,7 +209,7 @@ class ASCIIGenerator:
         logger.debug(f"Conversion terminée: {len(ascii_lines)} lignes générées")
         return ascii_lines
     
-    def generate_ascii(self, image_path, width=100, save_to_file=None, remove_bg=False):
+    def generate_ascii(self, image_path, width=100, save_to_file=None, remove_bg=False, progress_callback=None):
         """
         Génère l'art ASCII à partir d'une image avec optimisations de cache.
         
@@ -218,41 +218,59 @@ class ASCIIGenerator:
             width (int): Largeur en caractères
             save_to_file (str): Chemin pour sauvegarder (optionnel)
             remove_bg (bool): Supprimer l'arrière-plan avant conversion
+            progress_callback (callable): Fonction appelée pour indiquer la progression
             
         Returns:
             str: Art ASCII ou None si erreur
         """
+        def update_progress(step, details=""):
+            if progress_callback:
+                progress_callback(step, details)
+        
         logger.info(f"Début de la génération ASCII pour: {image_path}")
         if remove_bg:
             logger.info("Option de suppression d'arrière-plan activée")
         
+        update_progress("Chargement de l'image", "Lecture du fichier depuis le disque...")
+        
         # Chargement de l'image (avec cache)
         image = self.load_image(image_path)
         if image is None:
+            update_progress("❌ Erreur", "Impossible de charger l'image")
             return None
         
         # Suppression de l'arrière-plan si demandée (avec cache)
         if remove_bg:
+            if self._no_bg_image is not None:
+                update_progress("Arrière-plan", "Utilisation de l'image sans fond en cache...")
+            else:
+                update_progress("Suppression arrière-plan", "Traitement IA en cours (peut prendre quelques secondes)...")
             image = self.remove_background(image)
         
+        update_progress("Redimensionnement", f"Ajustement à {width} caractères de largeur...")
         # Redimensionnement
         image = self.resize_image(image, width)
         
+        update_progress("Conversion niveaux de gris", "Transformation de l'image en monochrome...")
         # Conversion en niveaux de gris
         image = self.convert_to_grayscale(image)
         
+        update_progress("Génération ASCII", "Conversion des pixels en caractères...")
         # Conversion en ASCII
         ascii_lines = self.pixels_to_ascii(image)
         ascii_art = '\n'.join(ascii_lines)
         
         # Sauvegarde si demandée
         if save_to_file:
+            update_progress("Sauvegarde", f"Écriture dans {save_to_file}...")
             try:
                 with open(save_to_file, 'w', encoding='utf-8') as f:
                     f.write(ascii_art)
                 logger.info(f"Art ASCII sauvegardé dans: {save_to_file}")
             except Exception as e:
                 logger.error(f"Erreur lors de la sauvegarde: {e}")
+                update_progress("❌ Erreur sauvegarde", str(e))
         
+        update_progress("✅ Terminé", f"Art ASCII généré avec succès ({len(ascii_lines)} lignes)")
         logger.info("Génération ASCII terminée avec succès")
         return ascii_art

@@ -350,21 +350,52 @@ class ASCIIGeneratorGUI:
         # Désactiver le bouton pendant la génération
         self.generate_btn.config(state="disabled", text="⏳ Génération...")
         self.result_text.delete(1.0, tk.END)
-        self.result_text.insert(1.0, "Génération en cours...\n")
+        
+        # Affichage initial de la progression
+        self.show_progress("Initialisation", "Préparation de la génération ASCII...")
         
         # Lancer dans un thread pour éviter de bloquer l'interface
         thread = threading.Thread(target=self._generate_ascii_thread)
         thread.daemon = True
         thread.start()
+    
+    def show_progress(self, step, details=""):
+        """Affiche la progression dans la zone de résultat."""
+        progress_text = f"""
+╔════════════════════════════════════════════════════════════════════╗
+║                    GÉNÉRATION EN COURS...                          ║
+╚════════════════════════════════════════════════════════════════════╝
+  ÉTAPE ACTUELLE: {step}
+
+  DÉTAILS: {details}
+═══════════════════════════════════════════════════════════════════════
+
+Veuillez patienter pendant le traitement...
+        """
+        
+        self.result_text.delete(1.0, tk.END)
+        self.result_text.insert(1.0, progress_text.strip())
+        
+        # Forcer la mise à jour de l'affichage
+        self.root.update()
+        
+    def update_progress(self, step, details=""):
+        """Met à jour la progression depuis le thread de génération."""
+        def _update():
+            self.show_progress(step, details)
+        
+        # Programmer la mise à jour dans le thread principal
+        self.root.after(0, _update)
         
     def _generate_ascii_thread(self):
-        """Thread de génération ASCII avec générateur persistant."""
+        """Thread de génération ASCII avec générateur persistant et progression."""
         try:
-            # Utiliser l'instance persistante du générateur
+            # Utiliser l'instance persistante du générateur avec callback de progression
             ascii_art = self.generator.generate_ascii(
                 self.image_path.get(), 
                 width=self.width.get(),
-                remove_bg=self.remove_background.get()
+                remove_bg=self.remove_background.get(),
+                progress_callback=self.update_progress
             )
             
             # Mettre à jour l'interface dans le thread principal
@@ -377,7 +408,7 @@ class ASCIIGeneratorGUI:
     
     def _update_result(self, ascii_art):
         """Met à jour le résultat dans l'interface (thread principal)."""
-        self.generate_btn.config(state="normal", text="🚀 Générer ASCII")
+        self.generate_btn.config(state="normal", text="Générer ASCII")
         
         if ascii_art:
             self.result_text.delete(1.0, tk.END)
@@ -385,12 +416,21 @@ class ASCIIGeneratorGUI:
             self.save_btn.config(state="normal")
             self.copy_btn.config(state="normal")
             
-            # Statistiques avec style selon le thème
+            # Statistiques avec informations de cache
             lines = len(ascii_art.split('\n'))
             chars = len(ascii_art)
             style_name = self.style.get()
             width = self.width.get()
             bg_removed = "Oui" if self.remove_background.get() else "Non"
+            
+            # Informations de cache
+            cache_info = []
+            if hasattr(self.generator, '_last_image_path') and self.generator._last_image_path:
+                cache_info.append("Image en cache")
+            if hasattr(self.generator, '_no_bg_image') and self.generator._no_bg_image is not None:
+                cache_info.append("Arrière-plan en cache")
+            
+            cache_status = " | ".join(cache_info) if cache_info else "Nouveau traitement"
             
             stats = f"\n\n📊 Statistiques:\n"
             stats += f"   • Lignes: {lines}\n"
@@ -398,16 +438,43 @@ class ASCIIGeneratorGUI:
             stats += f"   • Style: {style_name}\n"
             stats += f"   • Largeur: {width}\n"
             stats += f"   • Arrière-plan supprimé: {bg_removed}\n"
+            stats += f"   • Cache: {cache_status}\n"
             
             self.result_text.insert(tk.END, stats)
         else:
             self._show_error("Échec de la génération ASCII")
     
     def _show_error(self, error_msg):
-        """Affiche une erreur."""
+        """Affiche une erreur avec style."""
         self.generate_btn.config(state="normal", text="🚀 Générer ASCII")
+        
+        error_text = f"""
+╔════════════════════════════════════════════════════════════════════╗
+║                         ERREUR                                    ║
+╚════════════════════════════════════════════════════════════════════╝
+
+❌ PROBLÈME RENCONTRÉ:
+
+{error_msg}
+
+💡 SUGGESTIONS:
+   • Vérifiez que le fichier image existe
+   • Assurez-vous que le format est supporté (JPEG, PNG, BMP, GIF, TIFF)
+   • Vérifiez les permissions de lecture du fichier
+   • Essayez avec une image plus petite si problème de mémoire
+
+🔧 Si le problème persiste:
+   • Redémarrez l'application
+   • Vérifiez l'installation des dépendances (PIL/Pillow)
+   • Consultez les logs pour plus de détails
+
+═══════════════════════════════════════════════════════════════════════
+
+Sélectionnez une autre image ou réessayez.
+        """
+        
         self.result_text.delete(1.0, tk.END)
-        self.result_text.insert(1.0, f"❌ {error_msg}")
+        self.result_text.insert(1.0, error_text.strip())
         messagebox.showerror("Erreur", error_msg)
         
     def save_result(self):
