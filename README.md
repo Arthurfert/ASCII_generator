@@ -4,7 +4,7 @@ A python-coded image to ASCII convertor
 
 ## ✨ Features
 
-- **Image conversion** : Suport JPEG, PNG, BMP, GIF, TIFF
+- **Image conversion** : Supports JPEG, PNG, BMP, GIF, TIFF
 - **4 character styles** : Simple, Standard, Détaillé, Blocs
 - **Intelligent resizing** : Proportions preservation
 - **Remove background** : Option to remove the background with rembg library
@@ -74,6 +74,6 @@ ASCII_CHARS = {
 }
 ```
 
-## 📄 Licence
+## 📄 License
 
-Free of use !
+This project is under [MIT License](LICENSE).
